@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Parking - Dashboard</title>
+    <div style="text-align: center; margin-bottom: 20px;">
+    <a href="/analisis/" style="color: #1a237e; text-decoration: none; font-weight: bold;">
+        📊 Ver Dashboard de Análisis
+    </a>
+</div>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #1a237e;
+            margin-bottom: 30px;
+        }
+        
+        /* ===== DASHBOARD - GRID DE ESPACIOS ===== */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .espacio-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        .espacio-card:hover {
+            transform: translateY(-5px);
+        }
+        .espacio-card .numero {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        .espacio-card .estado {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .espacio-card .estado.libre {
+            color: #2e7d32;
+            background: #e8f5e9;
+        }
+        .espacio-card .estado.ocupado {
+            color: #c62828;
+            background: #ffebee;
+        }
+        .espacio-card .estado.reservado {
+            color: #e65100;
+            background: #fff3e0;
+        }
+        .espacio-card .estado.desconocido {
+            color: #e65100;
+            background: #fff3e0;
+        }
+        .espacio-card .sensor-status {
+            font-size: 12px;
+            color: #999;
+        }
+        .espacio-card .sensor-status.conectado {
+            color: #2e7d32;
+        }
+        .espacio-card .sensor-status.desconectado {
+            color: #c62828;
+        }
+        .espacio-card .ultima-act {
+            font-size: 11px;
+            color: #ccc;
+            margin-top: 10px;
+        }
+        
+        /* ===== ESTADÍSTICAS ===== */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .stat-card .numero {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1a237e;
+        }
+        .stat-card .label {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        /* ===== BOTONES DE ACCIÓN ===== */
+        .actions {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        .actions button {
+            padding: 15px 40px;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .actions button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+        }
+        .actions button:active {
+            transform: scale(0.97);
+        }
+        .btn-programada {
+            background: #1a237e;
+            color: white;
+        }
+        .btn-programada:hover {
+            background: #0d1747;
+        }
+        .btn-espontanea {
+            background: #ff6f00;
+            color: white;
+        }
+        .btn-espontanea:hover {
+            background: #e65100;
+        }
+        
+        /* ===== MODAL ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 650px;
+            width: 95%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideIn 0.3s ease;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        @keyframes slideIn {
+            from { transform: translateY(-50px) scale(0.95); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f2f5;
+            padding-bottom: 15px;
+        }
+        .modal-header h2 {
+            margin: 0;
+            color: #1a237e;
+            font-size: 24px;
+        }
+        .modal-header .subtitle {
+            font-size: 14px;
+            color: #666;
+            font-weight: normal;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 30px;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s;
+            line-height: 1;
+        }
+        .close-btn:hover {
+            color: #333;
+        }
+        
+        /* ===== FORMULARIOS EN MODAL ===== */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group.full-width {
+            grid-column: span 2;
+        }
+        .form-group label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .form-group label .required {
+            color: #c62828;
+        }
+        .form-group input, .form-group select {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border 0.3s;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #1a237e;
+            box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.1);
+        }
+        .btn-reservar {
+            grid-column: span 2;
+            padding: 12px;
+            background: #1a237e;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-top: 5px;
+        }
+        .btn-reservar:hover {
+            background: #0d1747;
+        }
+        .btn-reservar:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+        .btn-reservar-espontaneo {
+            background: #ff6f00;
+        }
+        .btn-reservar-espontaneo:hover {
+            background: #e65100;
+        }
+        
+        .info-text {
+            grid-column: span 2;
+            margin-top: 10px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            text-align: center;
+        }
+        .info-text.warning {
+            background: #fff3e0;
+            color: #e65100;
+            border: 1px solid #ffcc80;
+        }
+        .info-text.info {
+            background: #e3f2fd;
+            color: #0d47a1;
+            border: 1px solid #90caf9;
+        }
+        
+        /* ===== RESULTADO ===== */
+        .resultado {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+            grid-column: span 2;
+        }
+        .resultado.exito {
+            display: block;
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #4caf50;
+        }
+        .resultado.error {
+            display: block;
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #f44336;
+        }
+        
+        /* ===== REFRESH INDICATOR ===== */
+        .refresh-indicator {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+        .refresh-indicator .punto {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4caf50;
+            margin-right: 5px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        /* ===== TOAST ===== */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 2000;
+            animation: slideInToast 0.5s ease;
+            max-width: 400px;
+        }
+        .toast.success {
+            background: #2e7d32;
+        }
+        .toast.error {
+            background: #c62828;
+        }
+        .toast.info {
+            background: #1a237e;
+        }
+        @keyframes slideInToast {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .toast.fade-out {
+            animation: slideOutToast 0.5s ease forwards;
+        }
+        @keyframes slideOutToast {
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            .btn-reservar {
+                grid-column: span 1;
+            }
+            .info-text {
+                grid-column: span 1;
+            }
+            .resultado {
+                grid-column: span 1;
+            }
+            .actions {
+                flex-direction: column;
+                align-items: center;
+            }
+            .actions button {
+                width: 100%;
+                max-width: 300px;
+            }
+            .modal-content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚗 Smart Parking - Rafaela</h1>
+        
+        <!-- ===== DASHBOARD DE ESPACIOS ===== -->
+        <div class="dashboard" id="dashboard">
+            <!-- Los espacios se cargan aquí con JavaScript -->
+        </div>
+        
+        <!-- ===== ESTADÍSTICAS ===== -->
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="numero" id="total-espacios">0</div>
+                <div class="label">Total Espacios</div>
+            </div>
+            <div class="stat-card">
+                <div class="numero" id="libres">0</div>
+                <div class="label">🟢 Libres</div>
+            </div>
+            <div class="stat-card">
+                <div class="numero" id="ocupados">0</div>
+                <div class="label">🔴 Ocupados</div>
+            </div>
+            <div class="stat-card">
+                <div class="numero" id="reservados">0</div>
+                <div class="label">🟡 Reservados</div>
+            </div>
+        </div>
+        
+        <!-- ===== BOTONES DE ACCIÓN ===== -->
+        <div class="actions">
+            <button class="btn-programada" id="btnReservarProgramada">
+                📅 Reserva Programada
+            </button>
+            <button class="btn-espontanea" id="btnReservarEspontanea">
+                ⚡ Reserva Espontánea
+            </button>
+        </div>
+        
+        <!-- ===== MODAL - RESERVA PROGRAMADA ===== -->
+        <div id="modalProgramada" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h2>📅 Reserva Programada</h2>
+                        <span class="subtitle">Completa todos los datos para reservar con anticipación</span>
+                    </div>
+                    <button class="close-btn" data-modal="modalProgramada">&times;</button>
+                </div>
+                <form id="form-reserva-programada" class="form-grid">
+                    <div class="form-group">
+                        <label for="espacio_numero">Espacio <span class="required">*</span></label>
+                        <select id="espacio_numero" required>
+                            <option value="">Seleccionar...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="usuario_nombre">Nombre <span class="required">*</span></label>
+                        <input type="text" id="usuario_nombre" placeholder="Tu nombre" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email <span class="required">*</span></label>
+                        <input type="email" id="email" placeholder="tu@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="telefono">Teléfono <span class="required">*</span></label>
+                        <input type="tel" id="telefono" placeholder="3492123456" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="fecha">Fecha <span class="required">*</span></label>
+                        <input type="date" id="fecha" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="hora">Hora <span class="required">*</span></label>
+                        <input type="time" id="hora" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="duracion">Duración (minutos) <span class="required">*</span></label>
+                        <input type="number" id="duracion" placeholder="60" min="15" step="15" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="patente">Patente (opcional)</label>
+                        <input type="text" id="patente" placeholder="ABC123">
+                    </div>
+                    <div id="resultado-programada" class="resultado"></div>
+                    <button type="submit" class="btn-reservar">🔒 Reservar</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- ===== MODAL - RESERVA ESPONTÁNEA ===== -->
+        <div id="modalEspontanea" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h2>⚡ Reserva Espontánea</h2>
+                        <span class="subtitle">Reserva rápida sin registro previo</span>
+                    </div>
+                    <button class="close-btn" data-modal="modalEspontanea">&times;</button>
+                </div>
+                <form id="form-reserva-espontanea" class="form-grid">
+                    <div class="form-group">
+                        <label for="espacio_numero_espontaneo">Espacio <span class="required">*</span></label>
+                        <select id="espacio_numero_espontaneo" required>
+                            <option value="">Seleccionar...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="patente_espontaneo">Patente <span class="required">*</span></label>
+                        <input type="text" id="patente_espontaneo" placeholder="ABC123" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="telefono_espontaneo">Teléfono <span class="required">*</span></label>
+                        <input type="tel" id="telefono_espontaneo" placeholder="3492123456" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="duracion_espontaneo">Duración (minutos)</label>
+                        <input type="number" id="duracion_espontaneo" value="60" min="15" step="15">
+                    </div>
+                    <div class="info-text warning">
+                        ⚠️ Reserva sin registro previo. Solo se requiere patente y teléfono.
+                        <br>La reserva se crea con datos genéricos de usuario.
+                    </div>
+                    <div id="resultado-espontanea" class="resultado"></div>
+                    <button type="submit" class="btn-reservar btn-reservar-espontaneo">⚡ Reservar Ahora</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- ===== REFRESH INDICATOR ===== -->
+        <div class="refresh-indicator">
+            <span class="punto"></span>
+            Actualizando en tiempo real
+            <span id="timestamp"></span>
+        </div>
+    </div>
+    <script>
+        // ============================================================
+        //  CONSTANTES
+        // ============================================================
+        const API_URL = '/api/espacios/';
+        const RESERVAS_URL = '/api/reservas/';
+        let espaciosCache = [];
+
+        // ============================================================
+        //  DASHBOARD
+        // ============================================================
+        async function actualizarDashboard() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error('Error en la API');
+                espaciosCache = await response.json();
+                
+                renderizarEspacios(espaciosCache);
+                actualizarEstadisticas(espaciosCache);
+                actualizarSelectEspacios(espaciosCache, 'espacio_numero');
+                actualizarSelectEspacios(espaciosCache, 'espacio_numero_espontaneo');
+                actualizarTimestamp();
+                
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function renderizarEspacios(espacios) {
+            const container = document.getElementById('dashboard');
+            container.innerHTML = '';
+            
+            espacios.forEach(espacio => {
+                const estadoClass = espacio.estado.toLowerCase();
+                const sensorClass = espacio.sensor_conectado ? 'conectado' : 'desconectado';
+                const sensorText = espacio.sensor_conectado ? '✅ Conectado' : '❌ Desconectado';
+                
+                const card = document.createElement('div');
+                card.className = 'espacio-card';
+                card.innerHTML = `
+                    <div class="numero">Espacio ${espacio.numero}</div>
+                    <div class="estado ${estadoClass}">${espacio.estado}</div>
+                    <div class="sensor-status ${sensorClass}">${sensorText}</div>
+                    <div class="ultima-act">${formatFecha(espacio.ultima_actualizacion)}</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function actualizarEstadisticas(espacios) {
+            const total = espacios.length;
+            const libres = espacios.filter(e => e.estado === 'LIBRE').length;
+            const ocupados = espacios.filter(e => e.estado === 'OCUPADO').length;
+            const reservados = espacios.filter(e => e.estado === 'RESERVADO').length;
+            
+            document.getElementById('total-espacios').textContent = total;
+            document.getElementById('libres').textContent = libres;
+            document.getElementById('ocupados').textContent = ocupados;
+            document.getElementById('reservados').textContent = reservados;
+        }
+
+        function actualizarSelectEspacios(espacios, selectId) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Seleccionar...</option>';
+            
+            espacios.forEach(e => {
+                const option = document.createElement('option');
+                option.value = e.numero;
+                
+                let estadoIcon = '';
+                if (e.estado === 'LIBRE') estadoIcon = '🟢';
+                else if (e.estado === 'OCUPADO') estadoIcon = '🔴';
+                else if (e.estado === 'RESERVADO') estadoIcon = '🟡';
+                
+                option.textContent = `Espacio ${e.numero} ${estadoIcon} (${e.estado})`;
+                select.appendChild(option);
+            });
+            
+            if (currentValue) select.value = currentValue;
+        }
+
+        function actualizarTimestamp() {
+            const now = new Date();
+            document.getElementById('timestamp').textContent = 
+                ` - ${now.toLocaleTimeString('es-AR')}`;
+        }
+
+        function formatFecha(fechaStr) {
+            if (!fechaStr) return 'N/A';
+            const fecha = new Date(fechaStr);
+            return fecha.toLocaleString('es-AR');
+        }
+
+        // ============================================================
+        //  MODALES
+        // ============================================================
+        document.getElementById('btnReservarProgramada').addEventListener('click', () => {
+            document.getElementById('modalProgramada').classList.add('active');
+            actualizarSelectEspacios(espaciosCache, 'espacio_numero');
+        });
+        
+        document.getElementById('btnReservarEspontanea').addEventListener('click', () => {
+            document.getElementById('modalEspontanea').classList.add('active');
+            actualizarSelectEspacios(espaciosCache, 'espacio_numero_espontaneo');
+        });
+        
+        document.querySelectorAll('.close-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const modalId = btn.dataset.modal;
+                document.getElementById(modalId).classList.remove('active');
+            });
+        });
+        
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('active');
+                }
+            });
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal.active').forEach(modal => {
+                    modal.classList.remove('active');
+                });
+            }
+        });
+
+        // ============================================================
+        //  ACTUALIZAR HORA MÍNIMA SEGÚN FECHA SELECCIONADA
+        // ============================================================
+        function actualizarHoraMinima() {
+            const fechaSeleccionada = document.getElementById('fecha').value;
+            const hoy = new Date().toISOString().split('T')[0];
+            const horaInput = document.getElementById('hora');
+            
+            if (fechaSeleccionada === hoy) {
+                // Si es HOY: hora mínima = ahora + 1 hora
+                const now = new Date();
+                const hours = String(now.getHours() + 1).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                horaInput.min = `${hours}:${minutes}`;
+                horaInput.placeholder = `Mínimo ${hours}:${minutes}`;
+            } else {
+                // Si es OTRO DÍA: sin restricción de hora
+                horaInput.min = '00:00';
+                horaInput.placeholder = 'Sin restricción';
+            }
+        }
+
+        // ============================================================
+        //  FORMULARIO - RESERVA PROGRAMADA
+        // ============================================================
+        document.getElementById('form-reserva-programada').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const resultado = document.getElementById('resultado-programada');
+            resultado.className = 'resultado';
+            resultado.style.display = 'none';
+            
+            const btn = this.querySelector('.btn-reservar');
+            btn.disabled = true;
+            btn.textContent = '⏳ Procesando...';
+            
+            try {
+                const data = {
+                    espacio_numero: parseInt(document.getElementById('espacio_numero').value),
+                    usuario_nombre: document.getElementById('usuario_nombre').value.trim(),
+                    email: document.getElementById('email').value.trim(),
+                    telefono: document.getElementById('telefono').value.trim(),
+                    fecha: document.getElementById('fecha').value,
+                    hora: document.getElementById('hora').value + ':00',
+                    duracion: parseInt(document.getElementById('duracion').value),
+                    patente: document.getElementById('patente').value.trim() || '',
+                    tipo: 'programada'
+                };
+                
+                if (!data.espacio_numero) throw new Error('Selecciona un espacio');
+                if (!data.usuario_nombre) throw new Error('Ingresa tu nombre');
+                if (!data.email) throw new Error('Ingresa tu email');
+                if (!data.telefono) throw new Error('Ingresa tu teléfono');
+                if (!data.fecha) throw new Error('Selecciona una fecha');
+                if (!data.hora) throw new Error('Selecciona una hora');
+                if (!data.duracion || data.duracion < 30) throw new Error('La duración mínima es 30 minutos');
+                
+                const verificarResponse = await fetch(`${RESERVAS_URL}verificar/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        espacio_numero: data.espacio_numero,
+                        fecha: data.fecha,
+                        hora: data.hora,
+                        duracion: data.duracion
+                    })
+                });
+                
+                const verificarData = await verificarResponse.json();
+                
+                if (!verificarData.success) {
+                    throw new Error(verificarData.error || 'Error al verificar disponibilidad');
+                }
+                
+                if (!verificarData.disponible) {
+                    throw new Error(`❌ ${verificarData.mensaje}`);
+                }
+                
+                const reservaResponse = await fetch(`${RESERVAS_URL}crear/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const reservaData = await reservaResponse.json();
+                
+                if (!reservaData.success) {
+                    throw new Error(reservaData.error || 'Error al crear reserva');
+                }
+                
+                mostrarToast('✅ ' + reservaData.mensaje, 'success');
+                resultado.className = 'resultado exito';
+                resultado.textContent = `✅ Reserva confirmada para el Espacio ${data.espacio_numero} el ${data.fecha} a las ${data.hora}`;
+                resultado.style.display = 'block';
+                
+                this.reset();
+                document.getElementById('espacio_numero').value = '';
+                document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+                actualizarHoraMinima();
+                
+                setTimeout(() => {
+                    document.getElementById('modalProgramada').classList.remove('active');
+                }, 2500);
+                
+                actualizarDashboard();
+                
+            } catch (error) {
+                mostrarToast('❌ ' + error.message, 'error');
+                resultado.className = 'resultado error';
+                resultado.textContent = `❌ ${error.message}`;
+                resultado.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔒 Reservar';
+            }
+        });
+
+        // ============================================================
+        //  FORMULARIO - RESERVA ESPONTÁNEA
+        // ============================================================
+        document.getElementById('form-reserva-espontanea').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const resultado = document.getElementById('resultado-espontanea');
+            resultado.className = 'resultado';
+            resultado.style.display = 'none';
+            
+            const btn = this.querySelector('.btn-reservar');
+            btn.disabled = true;
+            btn.textContent = '⏳ Procesando...';
+            
+            try {
+                const espacio_numero = parseInt(document.getElementById('espacio_numero_espontaneo').value);
+                const patente = document.getElementById('patente_espontaneo').value.trim().toUpperCase();
+                const telefono = document.getElementById('telefono_espontaneo').value.trim();
+                const duracion = parseInt(document.getElementById('duracion_espontaneo').value) || 60;
+                
+                if (!espacio_numero) throw new Error('Selecciona un espacio');
+                if (!patente) throw new Error('Ingresa la patente');
+                if (!telefono) throw new Error('Ingresa el teléfono');
+                if (duracion < 15) throw new Error('La duración mínima es 15 minutos');
+                
+                const now = new Date();
+                const fecha = now.toISOString().split('T')[0];
+                const hora = now.toTimeString().split(' ')[0];
+                
+                const data = {
+                    espacio_numero: espacio_numero,
+                    usuario_nombre: 'Usuario Espontáneo',
+                    email: `espontaneo_${Date.now()}@smartparking.com`,
+                    telefono: telefono,
+                    fecha: fecha,
+                    hora: hora,
+                    duracion: duracion,
+                    patente: patente,
+                    tipo: 'espontanea'
+                };
+                
+                const verificarResponse = await fetch(`${RESERVAS_URL}verificar/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        espacio_numero: data.espacio_numero,
+                        fecha: data.fecha,
+                        hora: data.hora,
+                        duracion: data.duracion
+                    })
+                });
+                
+                const verificarData = await verificarResponse.json();
+                
+                if (!verificarData.success) {
+                    throw new Error(verificarData.error || 'Error al verificar disponibilidad');
+                }
+                
+                if (!verificarData.disponible) {
+                    throw new Error(`❌ ${verificarData.mensaje}`);
+                }
+                
+                const reservaResponse = await fetch(`${RESERVAS_URL}crear/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const reservaData = await reservaResponse.json();
+                
+                if (!reservaData.success) {
+                    throw new Error(reservaData.error || 'Error al crear reserva');
+                }
+                
+                mostrarToast('✅ Reserva espontánea confirmada', 'success');
+                resultado.className = 'resultado exito';
+                resultado.textContent = `✅ Reserva espontánea para ${patente} en Espacio ${espacio_numero}`;
+                resultado.style.display = 'block';
+                
+                this.reset();
+                document.getElementById('espacio_numero_espontaneo').value = '';
+                document.getElementById('duracion_espontaneo').value = '60';
+                
+                setTimeout(() => {
+                    document.getElementById('modalEspontanea').classList.remove('active');
+                }, 2500);
+                
+                actualizarDashboard();
+                
+            } catch (error) {
+                mostrarToast('❌ ' + error.message, 'error');
+                resultado.className = 'resultado error';
+                resultado.textContent = `❌ ${error.message}`;
+                resultado.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '⚡ Reservar Ahora';
+            }
+        });
+
+        // ============================================================
+        //  TOAST
+        // ============================================================
+        function mostrarToast(mensaje, tipo = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${tipo}`;
+            toast.textContent = mensaje;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('fade-out');
+                setTimeout(() => toast.remove(), 500);
+            }, 5000);
+        }
+
+        // ============================================================
+        //  INICIALIZAR
+        // ============================================================
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const todayStr = `${year}-${month}-${day}`;
+        document.getElementById('fecha').min = todayStr;
+        document.getElementById('fecha').value = todayStr;
+
+        // ✅ Evento: cuando cambia la fecha, actualizar hora mínima
+        document.getElementById('fecha').addEventListener('change', actualizarHoraMinima);
+
+        // ✅ Inicializar hora mínima
+        actualizarHoraMinima();
+        
+        // Cargar inicial
+        actualizarDashboard();
+        
+        // Actualizar cada 3 segundos
+        setInterval(actualizarDashboard, 3000);
+        setInterval(actualizarTimestamp, 1000);
+    </script>
+    
+</body>
+</html>

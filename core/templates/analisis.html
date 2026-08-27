@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Parking - Análisis</title>
+    <!-- Agregar debajo del título -->
+<div style="text-align: center; margin: 20px 0; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+    <button onclick="enviarReporte()" 
+            style="background: #1a237e; color: white; padding: 12px 30px; 
+                   border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+        📧 Enviar Reporte Semanal por Email
+    </button>
+</div>
+
+<script>
+async function enviarReporte() {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '⏳ Enviando...';
+    
+    try {
+        const response = await fetch('/api/estadisticas/enviar_reporte/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('✅ Reporte enviado correctamente');
+        } else {
+            alert('❌ Error: ' + data.error);
+        }
+    } catch (error) {
+        alert('❌ Error al enviar el reporte');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '📧 Enviar Reporte Semanal por Email';
+    }
+}
+</script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #1a237e;
+            margin-bottom: 30px;
+        }
+        
+        /* Pestañas */
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            padding: 12px 24px;
+            border: none;
+            background: #f5f5f5;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.3s;
+            color: #666;
+        }
+        .tab-btn:hover {
+            background: #e8e8e8;
+        }
+        .tab-btn.active {
+            background: #1a237e;
+            color: white;
+        }
+        
+        /* Contenido */
+        .tab-content {
+            display: none;
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 350px;
+            margin: 20px 0;
+        }
+        
+        /* Estadísticas */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid #1a237e;
+        }
+        .stat-card .valor {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1a237e;
+        }
+        .stat-card .label {
+            font-size: 13px;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .error-msg {
+            text-align: center;
+            padding: 20px;
+            color: #c62828;
+            background: #ffebee;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Dashboard de Análisis</h1>
+        
+        <!-- Pestañas -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="horarios">🕒 Por Horarios</button>
+            <button class="tab-btn" data-tab="espacios">🏢 Por Espacios</button>
+            <button class="tab-btn" data-tab="forecasting">📈 Forecasting</button>
+        </div>
+        
+        <!-- Tab: Horarios -->
+        <div id="tab-horarios" class="tab-content active">
+            <h2>🕒 Distribución por Horarios</h2>
+            <p style="color: #666; margin-bottom: 15px;">Reservas del día de hoy agrupadas por hora</p>
+            <div class="chart-container">
+                <canvas id="chartHorarios"></canvas>
+            </div>
+            <div class="stats-grid" id="statsHorarios">
+                <div class="stat-card">
+                    <div class="valor" id="total-hoy">-</div>
+                    <div class="label">Total Reservas Hoy</div>
+                </div>
+                <div class="stat-card">
+                    <div class="valor" id="minutos-hoy">-</div>
+                    <div class="label">Minutos Ocupados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="valor" id="hora-pico">-</div>
+                    <div class="label">Hora Pico</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tab: Espacios -->
+        <div id="tab-espacios" class="tab-content">
+            <h2>🏢 Ocupación por Espacio</h2>
+            <p style="color: #666; margin-bottom: 15px;">Últimos 7 días</p>
+            <div class="chart-container">
+                <canvas id="chartEspacios"></canvas>
+            </div>
+            <div class="stats-grid" id="statsEspacios">
+                <div class="stat-card">
+                    <div class="valor" id="espacio-mas">-</div>
+                    <div class="label">Espacio más solicitado</div>
+                </div>
+                <div class="stat-card">
+                    <div class="valor" id="espacio-menos">-</div>
+                    <div class="label">Espacio menos solicitado</div>
+                </div>
+                <div class="stat-card">
+                    <div class="valor" id="ocupacion-promedio">-</div>
+                    <div class="label">Ocupación promedio</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tab: Forecasting -->
+        <div id="tab-forecasting" class="tab-content">
+            <h2>📈 Forecasting - Predicción de Demanda</h2>
+            <p style="color: #666; margin-bottom: 15px;">Basado en los últimos 30 días</p>
+            <div class="chart-container">
+                <canvas id="chartForecasting"></canvas>
+            </div>
+            <div class="stats-grid" id="statsForecasting">
+                <div class="stat-card">
+                    <div class="valor" id="dia-mas">-</div>
+                    <div class="label">Día más ocupado</div>
+                </div>
+                <div class="stat-card">
+                    <div class="valor" id="dia-menos">-</div>
+                    <div class="label">Día menos ocupado</div>
+                </div>
+                <div class="stat-card">
+                    <div class="valor" id="promedio-diario">-</div>
+                    <div class="label">Promedio diario</div>
+                </div>
+                <div class="stat-card">
+                    <div class="valor" id="max-espacios">-</div>
+                    <div class="label">Máximo espacios usados</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        //  CONSTANTES
+        // ============================================================
+        const API_URL = '/api/estadisticas/';
+        let charts = {};
+
+        // ============================================================
+        //  PESTAÑAS
+        // ============================================================
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                const tabId = this.dataset.tab;
+                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                document.getElementById(`tab-${tabId}`).classList.add('active');
+                
+                // Cargar datos de la pestaña seleccionada
+                if (tabId === 'horarios') cargarHorarios();
+                else if (tabId === 'espacios') cargarEspacios();
+                else if (tabId === 'forecasting') cargarForecasting();
+            });
+        });
+
+        // ============================================================
+        //  GRÁFICO: HORARIOS
+        // ============================================================
+        async function cargarHorarios() {
+            try {
+                const response = await fetch(`${API_URL}por_horario/`);
+                const data = await response.json();
+                
+                if (!data.success) throw new Error(data.error);
+                
+                const ctx = document.getElementById('chartHorarios').getContext('2d');
+                
+                if (charts.horarios) charts.horarios.destroy();
+                
+                charts.horarios = new Chart(ctx, {
+                    type: 'bar',
+                    data: data.grafico,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top' }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Reservas' }
+                            },
+                            y1: {
+                                beginAtZero: true,
+                                position: 'right',
+                                title: { display: true, text: 'Minutos' },
+                                grid: { drawOnChartArea: false }
+                            }
+                        }
+                    }
+                });
+                
+                // Estadísticas
+                document.getElementById('total-hoy').textContent = data.estadisticas.total_reservas_hoy;
+                document.getElementById('minutos-hoy').textContent = data.estadisticas.total_minutos_hoy;
+                document.getElementById('hora-pico').textContent = data.estadisticas.hora_pico;
+                
+            } catch (error) {
+                console.error('Error cargando horarios:', error);
+            }
+        }
+
+        // ============================================================
+        //  GRÁFICO: ESPACIOS
+        // ============================================================
+        async function cargarEspacios() {
+            try {
+                const response = await fetch(`${API_URL}por_espacio/`);
+                const data = await response.json();
+                
+                if (!data.success) throw new Error(data.error);
+                
+                const ctx = document.getElementById('chartEspacios').getContext('2d');
+                
+                if (charts.espacios) charts.espacios.destroy();
+                
+                charts.espacios = new Chart(ctx, {
+                    type: 'bar',
+                    data: data.grafico,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top' }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Reservas' }
+                            },
+                            y1: {
+                                beginAtZero: true,
+                                max: 100,
+                                position: 'right',
+                                title: { display: true, text: '% Ocupación' },
+                                grid: { drawOnChartArea: false }
+                            }
+                        }
+                    }
+                });
+                
+                // Estadísticas
+                document.getElementById('espacio-mas').textContent = data.estadisticas.espacio_mas_solicitado;
+                document.getElementById('espacio-menos').textContent = data.estadisticas.espacio_menos_solicitado;
+                document.getElementById('ocupacion-promedio').textContent = data.estadisticas.ocupacion_promedio;
+                
+            } catch (error) {
+                console.error('Error cargando espacios:', error);
+            }
+        }
+
+        // ============================================================
+        //  GRÁFICO: FORECASTING
+        // ============================================================
+        async function cargarForecasting() {
+            try {
+                const response = await fetch(`${API_URL}forecasting/`);
+                const data = await response.json();
+                
+                if (!data.success) throw new Error(data.error);
+                
+                const ctx = document.getElementById('chartForecasting').getContext('2d');
+                
+                if (charts.forecasting) charts.forecasting.destroy();
+                
+                charts.forecasting = new Chart(ctx, {
+                    type: 'bar',
+                    data: data.grafico,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top' }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Reservas' }
+                            },
+                            y1: {
+                                beginAtZero: true,
+                                position: 'right',
+                                title: { display: true, text: 'Duración (min)' },
+                                grid: { drawOnChartArea: false }
+                            }
+                        }
+                    }
+                });
+                
+                // Estadísticas
+                document.getElementById('dia-mas').textContent = data.estadisticas.dia_mas_ocupado;
+                document.getElementById('dia-menos').textContent = data.estadisticas.dia_menos_ocupado;
+                document.getElementById('promedio-diario').textContent = data.estadisticas.promedio_reservas_diarias;
+                document.getElementById('max-espacios').textContent = data.estadisticas.total_espacios_utilizados;
+                
+            } catch (error) {
+                console.error('Error cargando forecasting:', error);
+            }
+        }
+
+        // ============================================================
+        //  INICIALIZAR
+        // ============================================================
+        // Cargar pestaña activa (Horarios por defecto)
+        cargarHorarios();
+        
+        // Actualizar cada 60 segundos
+        setInterval(() => {
+            const activeTab = document.querySelector('.tab-btn.active');
+            if (activeTab) {
+                const tabId = activeTab.dataset.tab;
+                if (tabId === 'horarios') cargarHorarios();
+                else if (tabId === 'espacios') cargarEspacios();
+                else if (tabId === 'forecasting') cargarForecasting();
+            }
+        }, 60000);
+    </script>
+</body>
+</html>

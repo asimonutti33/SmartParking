@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Cancelación de Reserva</title>
+</head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5;">
+    <div style="background: white; border-radius: 10px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <div style="text-align: center; margin-bottom: 25px;">
+            <h1 style="color: #1a237e; margin: 0;">🚗 Smart Parking Rafaela</h1>
+            <p style="color: #666; font-size: 16px;">Tu reserva ha sido cancelada</p>
+        </div>
+        
+        <div style="background: #ffebee; border-left: 4px solid #c62828; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+            <p style="margin: 0; color: #c62828; font-weight: bold;">❌ Reserva cancelada</p>
+        </div>
+        
+        <h2 style="color: #1a237e; font-size: 18px; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">📋 Detalles de la Cancelación</h2>
+        
+        <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+            <tr>
+                <td style="padding: 8px 0; color: #666; font-weight: bold; width: 40%;">📍 Espacio</td>
+                <td style="padding: 8px 0; color: #333;">#{{ espacio_numero }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 0; color: #666; font-weight: bold;">👤 Usuario</td>
+                <td style="padding: 8px 0; color: #333;">{{ usuario_nombre }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 0; color: #666; font-weight: bold;">📅 Fecha</td>
+                <td style="padding: 8px 0; color: #333;">{{ fecha }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 0; color: #666; font-weight: bold;">⏰ Hora</td>
+                <td style="padding: 8px 0; color: #333;">{{ hora }}</td>
+            </tr>
+        </table>
+        
+        <div style="background: #e8f5e9; border-left: 4px solid #2e7d32; padding: 12px 15px; margin: 20px 0; border-radius: 4px;">
+            <p style="margin: 0; color: #2e7d32; font-size: 14px;">
+                ✅ El espacio #{{ espacio_numero }} ya está disponible para nuevas reservas.
+            </p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 25px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+            <p style="color: #999; font-size: 12px;">
+                Este es un mensaje automático. Por favor no responder a este correo.
+            </p>
+            <p style="color: #999; font-size: 12px;">
+                © 2026 Smart Parking Rafaela - Todos los derechos reservados
+            </p>
+        </div>
+    </div>
+</body>
+</html>
