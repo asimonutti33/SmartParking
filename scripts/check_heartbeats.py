@@ -23,14 +23,12 @@ django.setup()
 # IMPORTAR DEPENDENCIAS
 # ============================================================
 from notifications.telegram_service import TelegramService
-
-# Importar variables globales desde views.py
 from core.views import ULTIMO_HEARTBEAT, ALERTA_ENVIADA
 
 # ============================================================
 # CONFIGURACIÓN
 # ============================================================
-TIMEOUT_RASPBERRY = 60  # 60 segundos sin heartbeat
+TIMEOUT_RASPBERRY = 600  # 60 segundos sin heartbeat
 
 
 def verificar_heartbeats():
@@ -43,16 +41,32 @@ def verificar_heartbeats():
         ahora = timezone.now()
         alertas_enviadas = 0
         
+        # ✅ Si no hay heartbeats registrados, no hacer nada
+        if not ULTIMO_HEARTBEAT:
+            print(f"✅ {datetime.now().strftime('%H:%M:%S')} - No hay Raspberry registradas")
+            return 0
+        
         # ✅ Iterar sobre todas las Raspberry registradas
         for raspberry_id, timestamp_str in list(ULTIMO_HEARTBEAT.items()):
-            # Convertir timestamp a datetime
+            # ✅ Convertir timestamp a datetime (manejar string o datetime)
             if isinstance(timestamp_str, str):
-                timestamp = datetime.fromisoformat(timestamp_str)
+                try:
+                    timestamp = datetime.fromisoformat(timestamp_str)
+                except ValueError:
+                    # Si el formato no es ISO, intentar con parse
+                    from dateutil import parser
+                    timestamp = parser.parse(timestamp_str)
             else:
                 timestamp = timestamp_str
             
+            # ✅ Si timestamp es naive, hacerlo aware
+            if timezone.is_naive(timestamp):
+                timestamp = timezone.make_aware(timestamp)
+            
             # Calcular tiempo sin contacto
             tiempo_sin_contacto = (ahora - timestamp).total_seconds()
+            
+            print(f"   🔍 {raspberry_id}: {int(tiempo_sin_contacto)}s sin contacto")
             
             # ✅ Si la Raspberry no responde
             if tiempo_sin_contacto > TIMEOUT_RASPBERRY:
@@ -73,7 +87,7 @@ Acción recomendada: Verificar conexión a Internet y estado de la Raspberry Pi.
 """
                     TelegramService.enviar_alerta_administrador(mensaje)
                     
-                    # ✅ Marcar alerta como enviada
+                    # Marcar alerta como enviada
                     if raspberry_id not in ALERTA_ENVIADA:
                         ALERTA_ENVIADA[raspberry_id] = {'arduino': False, 'raspberry': False}
                     ALERTA_ENVIADA[raspberry_id]['raspberry'] = True
@@ -81,7 +95,7 @@ Acción recomendada: Verificar conexión a Internet y estado de la Raspberry Pi.
                     alertas_enviadas += 1
                     print(f"📨 Alerta Raspberry {raspberry_id} enviada")
             
-            # ✅ Si la Raspberry volvió a conectarse, resetear alerta
+            # Si la Raspberry volvió a conectarse, resetear alerta
             else:
                 if (raspberry_id in ALERTA_ENVIADA and 
                     ALERTA_ENVIADA[raspberry_id].get('raspberry', False)):
@@ -95,6 +109,8 @@ Acción recomendada: Verificar conexión a Internet y estado de la Raspberry Pi.
         
     except Exception as e:
         print(f"❌ Error verificando heartbeats: {e}")
+        import traceback
+        traceback.print_exc()
         return 0
 
 
