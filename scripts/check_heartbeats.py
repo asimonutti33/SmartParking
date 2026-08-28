@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 """
 Script para verificar los heartbeats de las Raspberry Pi.
-Si una Raspberry no ha enviado heartbeat en más de 60 segundos,
-envía una alerta por Telegram.
-Uso: python scripts/check_heartbeats.py
+Usa los datos de la tabla espacios_estacionamiento.
 """
 
 import os
@@ -12,111 +10,73 @@ import django
 from datetime import datetime, timedelta
 from django.utils import timezone
 
-# ============================================================
-# CONFIGURAR DJANGO
-# ============================================================
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
-# ============================================================
-# IMPORTAR DEPENDENCIAS
-# ============================================================
 from notifications.telegram_service import TelegramService
-from core.views import ULTIMO_HEARTBEAT, ALERTA_ENVIADA
+from core.models import EspacioEstacionamiento
 
-# ============================================================
-# CONFIGURACIÓN
-# ============================================================
-TIMEOUT_RASPBERRY = 600  # 60 segundos sin heartbeat
+TIMEOUT_RASPBERRY = 600  # 10 minutos
 
 
 def verificar_heartbeats():
     """
-    Verifica los heartbeats de todas las Raspberry Pi.
-    Si una Raspberry no ha enviado heartbeat en más de 60 segundos,
-    envía una alerta por Telegram.
+    Verifica si la Raspberry está enviando datos.
+    Si todos los espacios tienen 'sensor_conectado = False',
+    significa que la Raspberry está caída.
     """
     try:
         ahora = timezone.now()
-        alertas_enviadas = 0
         
-        # ✅ Si no hay heartbeats registrados, no hacer nada
-        if not ULTIMO_HEARTBEAT:
-            print(f"✅ {datetime.now().strftime('%H:%M:%S')} - No hay Raspberry registradas")
+        # ✅ Verificar si hay algún espacio conectado
+        espacios_conectados = EspacioEstacionamiento.objects.filter(sensor_conectado=True)
+        
+        # ✅ Si hay algún espacio conectado, la Raspberry está viva
+        if espacios_conectados.exists():
+            print(f"✅ {datetime.now().strftime('%H:%M:%S')} - Raspberry conectada ({espacios_conectados.count()} sensores activos)")
+            
+            # ✅ Verificar si algún sensor está caído (solo para logging)
+            sensores_caidos = EspacioEstacionamiento.objects.filter(sensor_conectado=False)
+            if sensores_caidos.exists():
+                for sensor in sensores_caidos:
+                    print(f"   ⚠️ Sensor {sensor.numero} caído (última actualización: {sensor.ultima_actualizacion})")
+            
             return 0
         
-        # ✅ Iterar sobre todas las Raspberry registradas
-        for raspberry_id, timestamp_str in list(ULTIMO_HEARTBEAT.items()):
-            # ✅ Convertir timestamp a datetime (manejar string o datetime)
-            if isinstance(timestamp_str, str):
-                try:
-                    timestamp = datetime.fromisoformat(timestamp_str)
-                except ValueError:
-                    # Si el formato no es ISO, intentar con parse
-                    from dateutil import parser
-                    timestamp = parser.parse(timestamp_str)
-            else:
-                timestamp = timestamp_str
+        # ✅ Si NO hay espacios conectados, la Raspberry está caída
+        # Buscar el último espacio actualizado para obtener el timestamp
+        ultimo_espacio = EspacioEstacionamiento.objects.order_by('-ultima_actualizacion').first()
+        
+        if ultimo_espacio:
+            ultimo_contacto = ultimo_espacio.ultima_actualizacion
+            tiempo_sin_contacto = (ahora - ultimo_contacto).total_seconds()
             
-            # ✅ Si timestamp es naive, hacerlo aware
-            if timezone.is_naive(timestamp):
-                timestamp = timezone.make_aware(timestamp)
-            
-            # Calcular tiempo sin contacto
-            tiempo_sin_contacto = (ahora - timestamp).total_seconds()
-            
-            print(f"   🔍 {raspberry_id}: {int(tiempo_sin_contacto)}s sin contacto")
-            
-            # ✅ Si la Raspberry no responde
-            if tiempo_sin_contacto > TIMEOUT_RASPBERRY:
-                # Verificar si ya se envió alerta
-                if (raspberry_id not in ALERTA_ENVIADA or 
-                    not ALERTA_ENVIADA[raspberry_id].get('raspberry', False)):
-                    
-                    mensaje = f"""
+            mensaje = f"""
 ⚠️ ALERTA DEL SISTEMA
 
 La Raspberry Pi está caída o sin conexión.
 
-🆔 Raspberry ID: {raspberry_id}
-⏱️ Último heartbeat: {timestamp.strftime('%d/%m/%Y %H:%M:%S')}
+🆔 Dispositivo: Raspberry Pi (Hub)
+⏱️ Último dato recibido: {ultimo_contacto.strftime('%d/%m/%Y %H:%M:%S')}
 ⏳ Tiempo sin contacto: {int(tiempo_sin_contacto)} segundos
 
 Acción recomendada: Verificar conexión a Internet y estado de la Raspberry Pi.
 """
-                    TelegramService.enviar_alerta_administrador(mensaje)
-                    
-                    # Marcar alerta como enviada
-                    if raspberry_id not in ALERTA_ENVIADA:
-                        ALERTA_ENVIADA[raspberry_id] = {'arduino': False, 'raspberry': False}
-                    ALERTA_ENVIADA[raspberry_id]['raspberry'] = True
-                    
-                    alertas_enviadas += 1
-                    print(f"📨 Alerta Raspberry {raspberry_id} enviada")
-            
-            # Si la Raspberry volvió a conectarse, resetear alerta
-            else:
-                if (raspberry_id in ALERTA_ENVIADA and 
-                    ALERTA_ENVIADA[raspberry_id].get('raspberry', False)):
-                    ALERTA_ENVIADA[raspberry_id]['raspberry'] = False
-                    print(f"✅ Raspberry {raspberry_id} reconectada")
+            TelegramService.enviar_alerta_administrador(mensaje)
+            print(f"📨 Alerta Raspberry enviada")
+            return 1
         
-        if alertas_enviadas == 0:
-            print(f"✅ {datetime.now().strftime('%H:%M:%S')} - Todas las Raspberry están conectadas")
-        
-        return alertas_enviadas
+        print(f"✅ {datetime.now().strftime('%H:%M:%S')} - No hay datos de sensores")
+        return 0
         
     except Exception as e:
-        print(f"❌ Error verificando heartbeats: {e}")
+        print(f"❌ Error: {e}")
         import traceback
         traceback.print_exc()
         return 0
 
 
-# ============================================================
-# MAIN
-# ============================================================
 if __name__ == "__main__":
     print("=" * 50)
     print("  CHECK HEARTBEATS - Smart Parking")
