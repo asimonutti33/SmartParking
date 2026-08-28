@@ -14,6 +14,7 @@ from notifications.email_service import EmailService
 from notifications.telegram_service import TelegramService
 import logging
 import json
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
