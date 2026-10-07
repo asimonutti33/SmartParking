@@ -50,74 +50,63 @@ El proyecto nace como respuesta a la problemática de la congestión vehicular y
 ## 🏗️ Arquitectura
 
 El sistema está diseñado bajo una **arquitectura en capas**, separando claramente las responsabilidades de cada componente:
-┌─────────────────────────────────────────────────────────────────┐
-│ CAPA DE PRESENTACIÓN │
-│ ┌───────────────────────────────────────────────────────────┐ │
-│ │ Dashboard Web (HTML + CSS + JavaScript + Chart.js) │ │
-│ └───────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-│
-▼
-┌─────────────────────────────────────────────────────────────────┐
-│ CAPA DE APLICACIÓN │
-│ ┌───────────────────────────────────────────────────────────┐ │
-│ │ Django REST Framework - API REST │ │
-│ │ • /api/sensor/estado/ (Recepción de datos) │ │
-│ │ • /api/reservas/ (Gestión de reservas) │ │
-│ │ • /api/estadisticas/ (Análisis y estadísticas) │ │
-│ └───────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-│
-▼
-┌─────────────────────────────────────────────────────────────────┐
-│ CAPA DE NEGOCIO │
-│ ┌───────────────────────────────────────────────────────────┐ │
-│ │ Servicios (Services) │ │
-│ │ • ReservaService • ReportService • PDFGenerator │ │
-│ │ • EmailService • TelegramService │ │
-│ └───────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-│
-▼
-┌─────────────────────────────────────────────────────────────────┐
-│ CAPA DE DATOS │
-│ ┌───────────────────────────────────────────────────────────┐ │
-│ │ PostgreSQL │ │
-│ │ • espacios_estacionamiento • reserva │ │
-│ │ • feriados • telegram │ │
-│ └───────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-│
-▼
-┌─────────────────────────────────────────────────────────────────┐
-│ CAPA DE HARDWARE │
-│ ┌──────────────────────┐ ┌───────────────────────────┐ │
-│ │ Arduino UNO │ │ Raspberry Pi 4 │ │
-│ │ • Sensores HC-SR04 │────▶│ • Serial Reader │ │
-│ │ • LEDs RGB │ USB │ • HTTP Client │ │
-│ └──────────────────────┘ └───────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
 
-text
+```mermaid
+flowchart TB
+    subgraph PRESENTACION["🎨 CAPA DE PRESENTACIÓN"]
+        UI["Dashboard Web<br/>HTML + CSS + JavaScript + Chart.js"]
+    end
+
+    subgraph APLICACION["⚙️ CAPA DE APLICACIÓN"]
+        API["Django REST Framework<br/>• /api/sensor/estado/<br/>• /api/reservas/<br/>• /api/estadisticas/"]
+    end
+
+    subgraph NEGOCIO["🧠 CAPA DE NEGOCIO"]
+        SERVICIOS["Servicios<br/>• ReservaService<br/>• ReportService<br/>• PDFGenerator<br/>• EmailService<br/>• TelegramService"]
+    end
+
+    subgraph DATOS["💾 CAPA DE DATOS"]
+        DB["PostgreSQL<br/>• espacios_estacionamiento<br/>• reserva<br/>• feriados<br/>• telegram"]
+    end
+
+    subgraph HARDWARE["🔌 CAPA DE HARDWARE"]
+        ARDUINO["Arduino UNO<br/>• Sensores HC-SR04<br/>• LEDs RGB"]
+        RASPBERRY["Raspberry Pi 4<br/>• Serial Reader<br/>• HTTP Client"]
+    end
+
+    ARDUINO -->|Serial USB| RASPBERRY
+    RASPBERRY -->|HTTP POST| API
+    UI --> API
+    API --> SERVICIOS
+    SERVICIOS --> DB
+    
+    style PRESENTACION fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style APLICACION fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style NEGOCIO fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style DATOS fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style HARDWARE fill:#ffebee,stroke:#c62828,stroke-width:2px
+```
 
 ### Flujo de datos
-┌─────────────┐ Serial ┌─────────────┐ HTTP ┌─────────────┐
-│ Arduino │─────────────▶│ Raspberry │────────────▶│ Cloud │
-│ + Sensores │ USB │ Pi (Hub) │ POST │ (Django) │
-└─────────────┘ └─────────────┘ └─────────────┘
-│
-▼
-┌─────────────┐
-│ PostgreSQL │
-└─────────────┘
-│
-▼
-┌─────────────┐
-│ Dashboard │
-│ Web │
-└─────────────┘
 
-text
+```mermaid
+sequenceDiagram
+    participant A as Arduino
+    participant R as Raspberry Pi
+    participant D as Django (Cloud)
+    participant DB as PostgreSQL
+    participant U as Usuario
+
+    A->>R: Datos del sensor (Serial USB)
+    R->>D: POST /api/sensor/estado/
+    D->>DB: Guardar estado
+    DB-->>D: Confirmación
+    D-->>R: 200 OK
+    U->>D: GET /api/espacios/
+    D->>DB: Consultar espacios
+    DB-->>D: Lista de espacios
+    D-->>U: JSON con estados
+```
 
 ---
 
