@@ -66,7 +66,7 @@ flowchart TB
     end
 
     subgraph DATOS["💾 CAPA DE DATOS"]
-        DB["PostgreSQL<br/>• espacios_estacionamiento<br/>• reserva<br/>• feriados<br/>• telegram"]
+        DB["SQLite<br/>• espacios_estacionamiento<br/>• reserva<br/>• feriados<br/>• telegram"]
     end
 
     subgraph HARDWARE["🔌 CAPA DE HARDWARE"]
@@ -94,7 +94,7 @@ sequenceDiagram
     participant A as Arduino
     participant R as Raspberry Pi
     participant D as Django (Cloud)
-    participant DB as PostgreSQL
+    participant DB as SQLite
     participant U as Usuario
 
     A->>R: Datos del sensor (Serial USB)
@@ -118,7 +118,7 @@ sequenceDiagram
 | **Python** | 3.11 | Lenguaje principal |
 | **Django** | 4.2 | Framework web |
 | **Django REST Framework** | 3.14 | API REST |
-| **PostgreSQL** | 15 | Base de datos |
+| **SQLite** | 4.0 | Base de datos |
 | **ReportLab** | 4.0 | Generación de PDFs |
 | **psycopg2** | 2.9 | Driver PostgreSQL |
 
@@ -153,7 +153,7 @@ sequenceDiagram
 ### Requisitos previos
 
 - Python 3.10 o superior
-- PostgreSQL 15 o superior
+- SQLite 3
 - Git
 - (Opcional) Arduino IDE
 - (Opcional) Raspberry Pi OS
@@ -186,12 +186,6 @@ SECRET_KEY=tu-secret-key
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
 
-# Base de datos
-DB_NAME=smart_parking
-DB_USER=postgres
-DB_PASSWORD=tu-password
-DB_HOST=localhost
-DB_PORT=5432
 
 # Email
 EMAIL_HOST_USER=tu-email@gmail.com
@@ -373,7 +367,6 @@ Alejandro Simonutti
 📧 Email: simonuttialejandro@gmail.com
 
 🐙 GitHub: @asimonutti33
-
 
 
 ⭐ Si este proyecto te resultó útil, considerá darle una estrella ⭐
