@@ -1,9 +1,12 @@
 import requests
+import os
 import logging
 from django.conf import settings
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
+load_dotenv()
 
 class TelegramService:
     """
@@ -11,11 +14,11 @@ class TelegramService:
     """
     
     # ✅ TOKEN DEL BOT
-    BOT_TOKEN = "8223297017:AAEnupeHaQ8ecCyZM3G9E4dEVRwwK4bsutA"
+    BOT_TOKEN = BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
     BASE_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
     
     # ✅ CHAT ID DEL ADMINISTRADOR (el que usabas en Node-RED)
-    ADMIN_CHAT_ID = "5164929345"
+    ADMIN_CHAT_ID = os.getenv("TELEGRAM_ADMIN_CHAT_ID")
     
     @staticmethod
     def enviar_mensaje(chat_id, texto, parse_mode='HTML'):

@@ -1,10 +1,11 @@
 # notifications/management/commands/iniciar_bot.py
 import telebot
+import os
 from telebot import types
 from django.core.management.base import BaseCommand
 from core.models import TelegramUsuario  # Ajustá la importación a tu modelo real
 
-TOKEN = "8223297017:AAEnupeHaQ8ecCyZM3G9E4dEVRwwK4bsutA"
+TOKEN = os.getenv('TELEGRAM_TOKEN')
 bot = telebot.TeleBot(TOKEN)
 
 class Command(BaseCommand):

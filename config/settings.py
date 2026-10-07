@@ -104,14 +104,17 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [],  # <-- Desactivar autenticación por defecto
 }
 
+def env_bool(key, default=False):
+    return os.getenv(key, str(default)).lower() in ('true', '1', 'yes')
+
 # Configuración de Gmail
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
-EMAIL_HOST_USER = 'smartparkingrafaela@gmail.com'           # Tu correo Gmail
-EMAIL_HOST_PASSWORD = 'gvxycnrephacbhjl'  # Contraseña de aplicación
-DEFAULT_FROM_EMAIL = 'Smart Parking Rafaela <tu-email@gmail.com>'
-REPORT_EMAIL = 'ale_s33@hotmail.com'
-SENSOR_TOKEN = 'SmartParking2026SecureToken'
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.getenv('EMAIL_HOST')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_USE_TLS = env_bool('EMAIL_USE_TLS', True)
+EMAIL_USE_SSL = env_bool('EMAIL_USE_SSL', False)
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
+REPORT_EMAIL = os.getenv('REPORT_EMAIL')
+SENSOR_TOKEN = os.getenv('SENSOR_TOKEN')
